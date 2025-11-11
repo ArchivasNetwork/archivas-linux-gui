@@ -10,7 +10,7 @@ This project forks Bitcoin Core's mature Qt desktop application framework and re
 
 ## Project Status
 
-🚧 **In Planning Phase** - Specification complete, implementation pending.
+✅ **Active Development** - Application is functional and available for use.
 
 ## Goals
 
