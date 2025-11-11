@@ -50,9 +50,11 @@ jobs:
         grep "replace" go.mod || echo "No replace directive found"
         
         echo "Updating go.mod replace directive..."
-        # Remove any existing replace directive (including commented ones)
+        # Remove any existing replace directive (including commented ones and old paths)
         sed -i '/^replace github.com\/ArchivasNetwork\/archivas/d' go.mod
         sed -i '/^#.*replace github.com\/ArchivasNetwork\/archivas/d' go.mod
+        # Also remove any line containing the old hardcoded path
+        sed -i '/\/home\/iljanemesis\/archivas/d' go.mod
         
         # Add new replace directive at the end
         echo "" >> go.mod
@@ -72,12 +74,40 @@ jobs:
     
     - name: Build Release
       run: |
+        # Verify go.mod was updated correctly before building
+        echo "Verifying go.mod configuration..."
+        cd src/go/bridge
+        if grep -q "/home/iljanemesis/archivas" go.mod; then
+          echo "ERROR: go.mod still contains old hardcoded path!"
+          echo "go.mod contents:"
+          cat go.mod
+          exit 1
+        fi
+        if ! grep -q "replace github.com/ArchivasNetwork/archivas => /tmp/archivas" go.mod; then
+          echo "ERROR: go.mod replace directive not set correctly!"
+          echo "go.mod contents:"
+          cat go.mod
+          exit 1
+        fi
+        echo "✓ go.mod is correctly configured"
+        grep "replace" go.mod
+        
+        # Now build
+        cd ${{ github.workspace }}
         chmod +x scripts/*.sh
         chmod +x *.sh || true
         mkdir -p build-release
         cd build-release
         cmake .. -DCMAKE_BUILD_TYPE=Release
         make -j$(nproc)
+        
+        # Verify build succeeded
+        if [ ! -f "archivas-qt" ]; then
+            echo "ERROR: Build failed - archivas-qt not found"
+            exit 1
+        fi
+        echo "✓ Build successful: $(pwd)/archivas-qt"
+        ls -lh archivas-qt
     
     - name: Create AppImage
       run: |
