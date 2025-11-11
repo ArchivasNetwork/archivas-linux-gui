@@ -320,7 +320,7 @@ jobs:
         files: |
           archivas-qt-*.AppImage
           archivas-qt_*.deb
-        fail_errors: false  # Don't fail if some files are missing
+        fail_on_unmatched_files: false  # Don't fail if some files are missing
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
