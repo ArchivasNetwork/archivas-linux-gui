@@ -40,62 +40,86 @@ jobs:
       run: |
         # Clone the archivas repository (required for build)
         echo "Cloning archivas repository..."
-        git clone --depth 1 https://github.com/ArchivasNetwork/archivas.git /tmp/archivas || true
+        git clone --depth 1 https://github.com/ArchivasNetwork/archivas.git /tmp/archivas
         
         # Verify archivas repo was cloned
         if [ ! -d "/tmp/archivas" ]; then
           echo "ERROR: Failed to clone archivas repository"
           exit 1
         fi
-        echo "Archivas repository cloned to /tmp/archivas"
+        echo "✓ Archivas repository cloned to /tmp/archivas"
         ls -la /tmp/archivas | head -5
+        
+        # Clear Go module cache to remove any cached paths
+        echo "Clearing Go module cache..."
+        go clean -modcache 2>&1 || true
         
         # Update go.mod to use the cloned path
         cd src/go/bridge
+        echo "Current directory: $(pwd)"
         echo "Current go.mod replace directive:"
         grep "replace" go.mod || echo "No replace directive found"
+        echo ""
+        echo "Full go.mod before update:"
+        cat go.mod
         
+        echo ""
         echo "Updating go.mod replace directive..."
-        # Remove any existing replace directive (including commented ones and old paths)
-        sed -i '/^replace github.com\/ArchivasNetwork\/archivas/d' go.mod
-        sed -i '/^#.*replace github.com\/ArchivasNetwork\/archivas/d' go.mod
-        # Also remove any line containing the old hardcoded path
-        sed -i '/\/home\/iljanemesis\/archivas/d' go.mod
+        # Remove ANY line containing replace for archivas (be very aggressive)
+        sed -i '/replace.*ArchivasNetwork\/archivas/d' go.mod
+        sed -i '/#.*replace.*ArchivasNetwork\/archivas/d' go.mod
+        sed -i '/iljanemesis/d' go.mod
+        
+        # Remove any trailing blank lines
+        sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' go.mod
         
         # Add new replace directive at the end
         echo "" >> go.mod
         echo "replace github.com/ArchivasNetwork/archivas => /tmp/archivas" >> go.mod
         
         # Verify the update
+        echo ""
         echo "Updated go.mod replace directive:"
-        tail -3 go.mod
+        tail -5 go.mod
         
-        # Clean go.sum to remove any cached paths
-        echo "Cleaning go.sum to remove cached paths..."
-        if [ -f "go.sum" ]; then
-          rm -f go.sum
-          echo "Removed go.sum"
+        # Remove go.sum completely to force regeneration
+        echo ""
+        echo "Removing go.sum to force clean rebuild..."
+        rm -f go.sum
+        
+        # Verify /tmp/archivas has a go.mod (to confirm it's a valid Go module)
+        echo ""
+        echo "Verifying /tmp/archivas is a valid Go module:"
+        if [ -f "/tmp/archivas/go.mod" ]; then
+          echo "✓ /tmp/archivas/go.mod exists"
+          head -5 /tmp/archivas/go.mod
+        else
+          echo "ERROR: /tmp/archivas/go.mod not found!"
+          exit 1
         fi
         
-        # Run go mod tidy to update dependencies
-        echo "Running go mod tidy..."
-        go mod tidy 2>&1
-        
-        # Verify go.sum doesn't have old paths
-        if [ -f "go.sum" ]; then
-          if grep -q "iljanemesis" go.sum; then
-            echo "ERROR: go.sum still contains old paths!"
-            grep "iljanemesis" go.sum
-            exit 1
-          fi
-        fi
+        # Run go mod tidy to update dependencies (this will regenerate go.sum)
+        echo ""
+        echo "Running go mod tidy to update dependencies..."
+        export GOPROXY=direct
+        export GOSUMDB=off
+        go mod tidy -v 2>&1
         
         # Final verification
-        echo "Final replace directive:"
-        grep "replace github.com/ArchivasNetwork/archivas" go.mod || echo "ERROR: Replace directive not found!"
-        
-        # Show final go.mod to verify
-        echo "Final go.mod contents:"
+        echo ""
+        echo "=== FINAL VERIFICATION ==="
+        echo "Replace directive in go.mod:"
+        grep "replace" go.mod || echo "ERROR: Replace directive not found!"
+        echo ""
+        echo "Checking for old paths:"
+        if grep -q "iljanemesis" go.mod go.sum 2>/dev/null; then
+          echo "ERROR: Old paths still found!"
+          grep "iljanemesis" go.mod go.sum 2>/dev/null
+          exit 1
+        fi
+        echo "✓ No old paths found"
+        echo ""
+        echo "Final go.mod:"
         cat go.mod
     
     - name: Verify Go Module Configuration
