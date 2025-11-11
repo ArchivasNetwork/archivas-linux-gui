@@ -71,8 +71,16 @@ target_link_libraries(archivas-qt
 
 # Platform-specific libraries
 if(APPLE)
-    # macOS doesn't need explicit pthread or dl linking
-    # These are automatically linked
+    # macOS frameworks required for Go CGO bridge (crypto/tls uses Security framework)
+    find_library(SECURITY_FRAMEWORK Security)
+    find_library(COREFOUNDATION_FRAMEWORK CoreFoundation)
+    find_library(FOUNDATION_FRAMEWORK Foundation)
+    
+    target_link_libraries(archivas-qt
+        ${SECURITY_FRAMEWORK}
+        ${COREFOUNDATION_FRAMEWORK}
+        ${FOUNDATION_FRAMEWORK}
+    )
 elseif(UNIX)
     # Linux
     target_link_libraries(archivas-qt
