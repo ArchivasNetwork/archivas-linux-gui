@@ -70,38 +70,81 @@ jobs:
         echo "Updated go.mod replace directive:"
         tail -3 go.mod
         
+        # Clean go.sum to remove any cached paths
+        echo "Cleaning go.sum to remove cached paths..."
+        if [ -f "go.sum" ]; then
+          rm -f go.sum
+          echo "Removed go.sum"
+        fi
+        
         # Run go mod tidy to update dependencies
         echo "Running go mod tidy..."
-        go mod tidy 2>&1 | head -20
+        go mod tidy 2>&1
+        
+        # Verify go.sum doesn't have old paths
+        if [ -f "go.sum" ]; then
+          if grep -q "iljanemesis" go.sum; then
+            echo "ERROR: go.sum still contains old paths!"
+            grep "iljanemesis" go.sum
+            exit 1
+          fi
+        fi
         
         # Final verification
         echo "Final replace directive:"
         grep "replace github.com/ArchivasNetwork/archivas" go.mod || echo "ERROR: Replace directive not found!"
+        
+        # Show final go.mod to verify
+        echo "Final go.mod contents:"
+        cat go.mod
     
-    - name: Build Release
+    - name: Verify Go Module Configuration
       run: |
         # Verify go.mod was updated correctly before building
         echo "Verifying go.mod configuration..."
         cd src/go/bridge
+        
+        # Check for old paths
         if grep -q "/home/iljanemesis/archivas" go.mod; then
           echo "ERROR: go.mod still contains old hardcoded path!"
           echo "go.mod contents:"
           cat go.mod
           exit 1
         fi
+        
+        # Check for correct replace directive
         if ! grep -q "replace github.com/ArchivasNetwork/archivas => /tmp/archivas" go.mod; then
           echo "ERROR: go.mod replace directive not set correctly!"
           echo "go.mod contents:"
           cat go.mod
           exit 1
         fi
-        echo "✓ go.mod is correctly configured"
-        grep "replace" go.mod
         
-        # Now build
+        # Verify /tmp/archivas exists
+        if [ ! -d "/tmp/archivas" ]; then
+          echo "ERROR: /tmp/archivas directory does not exist!"
+          exit 1
+        fi
+        
+        echo "✓ go.mod is correctly configured"
+        echo "Replace directive:"
+        grep "replace" go.mod
+        echo "✓ /tmp/archivas exists: $(ls -la /tmp/archivas | head -3)"
+        
+        # Verify go.sum is clean
+        if [ -f "go.sum" ] && grep -q "iljanemesis" go.sum; then
+          echo "ERROR: go.sum contains old paths!"
+          grep "iljanemesis" go.sum
+          exit 1
+        fi
+    
+    - name: Build Release
+      run: |
         cd ${{ github.workspace }}
         chmod +x scripts/*.sh
         chmod +x *.sh || true
+        
+        # Use the build script which handles paths correctly
         mkdir -p build-release
         cd build-release
         cmake .. -DCMAKE_BUILD_TYPE=Release
