@@ -288,23 +288,39 @@ jobs:
         # Run from project root
         cd ${{ github.workspace }}
         ./scripts/create-deb.sh
+        # Verify .deb was created (check with find since glob might not work in if)
+        DEB_COUNT=$(find . -maxdepth 1 -name "archivas-qt_*.deb" -type f | wc -l)
+        if [ "$DEB_COUNT" -eq 0 ]; then
+          echo "ERROR: .deb file not found in root directory!"
+          echo "Files in root:"
+          ls -lh *.deb 2>/dev/null || echo "No .deb files in root"
+          echo "Searching all directories:"
+          find . -name "*.deb" -type f
+          exit 1
+        fi
+        echo "✓ .deb file created successfully"
+        find . -maxdepth 1 -name "archivas-qt_*.deb" -type f -exec ls -lh {} \;
     
     - name: Get Release Tag
       id: get_tag
       run: |
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          echo "tag=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          TAG="${{ github.event.inputs.version }}"
         elif [ "${{ github.event_name }}" = "release" ]; then
-          echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          TAG="${{ github.event.release.tag_name }}"
         else
-          echo "tag=v1.0.0" >> $GITHUB_OUTPUT
+          TAG="v1.0.0"
         fi
-        echo "Using tag: $(cat $GITHUB_OUTPUT | grep tag | cut -d'=' -f2)"
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        echo "Using tag: $TAG"
+        echo "Event: ${{ github.event_name }}"
     
     - name: List Files Before Upload
       run: |
         echo "=== FILES TO UPLOAD ==="
         cd ${{ github.workspace }}
+        echo "Current directory: $(pwd)"
+        echo ""
         echo "Looking for AppImage files:"
         ls -lh archivas-qt-*.AppImage 2>/dev/null || echo "No AppImage files found"
         echo ""
@@ -313,15 +329,48 @@ jobs:
         echo ""
         echo "All files in workspace root:"
         ls -lh *.AppImage *.deb 2>/dev/null || echo "No package files in root"
+        echo ""
+        echo "Files in build-release:"
+        ls -lh build-release/*.deb build-release/*.AppImage 2>/dev/null || echo "No package files in build-release"
+        echo ""
+        echo "Files in deb-package:"
+        ls -lh deb-package/*.deb 2>/dev/null || echo "No package files in deb-package"
+    
+    - name: Find Package Files
+      id: find_files
+      run: |
+        cd ${{ github.workspace }}
+        # Find .deb file (should be in root)
+        DEB_FILE=$(find . -name "archivas-qt_*.deb" -type f | head -1)
+        if [ -n "$DEB_FILE" ]; then
+          echo "deb_file=$DEB_FILE" >> $GITHUB_OUTPUT
+          echo "Found .deb file: $DEB_FILE"
+          ls -lh "$DEB_FILE"
+        else
+          echo "ERROR: No .deb file found!"
+          find . -name "*.deb" -type f || echo "No .deb files found anywhere"
+          exit 1
+        fi
+        
+        # Find AppImage file (optional)
+        APPIMAGE_FILE=$(find . -name "archivas-qt-*.AppImage" -type f | head -1)
+        if [ -n "$APPIMAGE_FILE" ]; then
+          echo "appimage_file=$APPIMAGE_FILE" >> $GITHUB_OUTPUT
+          echo "Found AppImage file: $APPIMAGE_FILE"
+          ls -lh "$APPIMAGE_FILE"
+        else
+          echo "WARNING: No AppImage file found (optional)"
+        fi
     
     - name: Upload Release Assets
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.get_tag.outputs.tag }}
         files: |
-          archivas-qt-*.AppImage
-          archivas-qt_*.deb
-        fail_on_unmatched_files: false  # Don't fail if some files are missing
+          ${{ steps.find_files.outputs.deb_file }}
+          ${{ steps.find_files.outputs.appimage_file }}
+        fail_on_unmatched_files: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      continue-on-error: false
 
