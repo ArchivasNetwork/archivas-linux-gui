@@ -125,50 +125,74 @@ jobs:
     - name: Verify Go Module Configuration
       run: |
         # Verify go.mod was updated correctly before building
-        echo "Verifying go.mod configuration..."
+        echo "=== VERIFYING GO MODULE CONFIGURATION ==="
         cd src/go/bridge
         
-        # Check for old paths
+        # Check for old paths in go.mod
+        echo "Checking for old paths in go.mod..."
         if grep -q "/home/iljanemesis/archivas" go.mod; then
           echo "ERROR: go.mod still contains old hardcoded path!"
           echo "go.mod contents:"
           cat go.mod
           exit 1
         fi
+        echo "✓ No old paths in go.mod"
         
         # Check for correct replace directive
+        echo "Checking replace directive..."
         if ! grep -q "replace github.com/ArchivasNetwork/archivas => /tmp/archivas" go.mod; then
           echo "ERROR: go.mod replace directive not set correctly!"
           echo "go.mod contents:"
           cat go.mod
           exit 1
         fi
+        echo "✓ Replace directive is correct"
         
         # Verify /tmp/archivas exists
+        echo "Verifying /tmp/archivas exists..."
         if [ ! -d "/tmp/archivas" ]; then
           echo "ERROR: /tmp/archivas directory does not exist!"
           exit 1
         fi
-        
-        echo "✓ go.mod is correctly configured"
-        echo "Replace directive:"
-        grep "replace" go.mod
-        echo "✓ /tmp/archivas exists: $(ls -la /tmp/archivas | head -3)"
+        echo "✓ /tmp/archivas exists"
         
         # Verify go.sum is clean
+        echo "Checking go.sum for old paths..."
         if [ -f "go.sum" ] && grep -q "iljanemesis" go.sum; then
           echo "ERROR: go.sum contains old paths!"
           grep "iljanemesis" go.sum
           exit 1
         fi
+        echo "✓ go.sum is clean"
+        
+        # Test that Go can resolve the module
+        echo "Testing Go module resolution..."
+        go list -m github.com/ArchivasNetwork/archivas 2>&1 || echo "WARNING: Could not list module (may be normal for local replace)"
+        
+        echo ""
+        echo "=== VERIFICATION COMPLETE ==="
+        echo "go.mod replace directive:"
+        grep "replace" go.mod
     
     - name: Build Release
       run: |
         cd ${{ github.workspace }}
+        
+        # Final check before building
+        echo "=== FINAL PRE-BUILD CHECK ==="
+        cd src/go/bridge
+        echo "Current go.mod replace:"
+        grep "replace" go.mod || echo "ERROR: No replace directive!"
+        if grep -q "iljanemesis" go.mod 2>/dev/null; then
+          echo "ERROR: Old path found in go.mod!"
+          cat go.mod
+          exit 1
+        fi
+        cd ${{ github.workspace }}
+        
+        # Build
         chmod +x scripts/*.sh
         chmod +x *.sh || true
-        
-        # Use the build script which handles paths correctly
         mkdir -p build-release
         cd build-release
         cmake .. -DCMAKE_BUILD_TYPE=Release
