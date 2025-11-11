@@ -368,10 +368,14 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.get_tag.outputs.tag }}
+        name: Archivas Core GUI ${{ steps.get_tag.outputs.tag }}
+        draft: false
+        prerelease: false
         files: |
           ${{ steps.find_files.outputs.deb_file }}
           ${{ steps.find_files.outputs.appimage_file }}
         fail_on_unmatched_files: false
+        generate_release_notes: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       continue-on-error: false
