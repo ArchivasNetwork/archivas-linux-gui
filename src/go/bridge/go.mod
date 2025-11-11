@@ -38,9 +38,3 @@ require (
 	golang.org/x/sys v0.35.0 // indirect
 	google.golang.org/protobuf v1.36.8 // indirect
 )
-
-# For local development: Uncomment and set your local archivas path
-# replace github.com/ArchivasNetwork/archivas => /path/to/your/archivas
-
-# For CI: The workflow automatically handles this
-# For users: Use scripts/setup-go-mod.sh or build will use GitHub module
