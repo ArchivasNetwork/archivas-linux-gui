@@ -30,14 +30,31 @@ jobs:
       with:
         go-version: '1.21'
     
-    - name: Clone Archivas Repository
+    - name: Setup Go Module
       run: |
-        # Clone the archivas repository to replace the local path in go.mod
-        git clone https://github.com/ArchivasNetwork/archivas.git /tmp/archivas || true
+        # Clone the archivas repository (required for build)
+        echo "Cloning archivas repository..."
+        git clone --depth 1 https://github.com/ArchivasNetwork/archivas.git /tmp/archivas || true
+        
         # Update go.mod to use the cloned path
         cd src/go/bridge
-        sed -i 's|replace github.com/ArchivasNetwork/archivas => .*|replace github.com/ArchivasNetwork/archivas => /tmp/archivas|' go.mod
-        cat go.mod | grep replace
+        echo "Updating go.mod replace directive..."
+        if grep -q "^replace github.com/ArchivasNetwork/archivas" go.mod; then
+          # Update existing replace
+          sed -i 's|^replace github.com/ArchivasNetwork/archivas => .*|replace github.com/ArchivasNetwork/archivas => /tmp/archivas|' go.mod
+        else
+          # Add replace directive
+          echo "" >> go.mod
+          echo "replace github.com/ArchivasNetwork/archivas => /tmp/archivas" >> go.mod
+        fi
+        
+        # Run go mod tidy to update dependencies
+        echo "Running go mod tidy..."
+        go mod tidy
+        
+        # Verify replace directive
+        echo "Replace directive:"
+        grep "replace github.com/ArchivasNetwork/archivas" go.mod || echo "WARNING: Replace directive not found"
     
     - name: Build Release
       run: |
