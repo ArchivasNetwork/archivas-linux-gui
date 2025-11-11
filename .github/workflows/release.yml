@@ -38,6 +38,11 @@ jobs:
     
     - name: Setup Go Module
       run: |
+        # Set Go environment variables first
+        export GO111MODULE=on
+        export GOPROXY=direct
+        export GOSUMDB=off
+        
         # Clone the archivas repository (required for build)
         echo "Cloning archivas repository..."
         git clone --depth 1 https://github.com/ArchivasNetwork/archivas.git /tmp/archivas
@@ -50,9 +55,11 @@ jobs:
         echo "✓ Archivas repository cloned to /tmp/archivas"
         ls -la /tmp/archivas | head -5
         
-        # Clear Go module cache to remove any cached paths
-        echo "Clearing Go module cache..."
+        # Clear Go module cache and build cache
+        echo "Clearing Go module and build cache..."
         go clean -modcache 2>&1 || true
+        go clean -cache 2>&1 || true
+        unset GOPATH || true
         
         # Update go.mod to use the cloned path
         cd src/go/bridge
