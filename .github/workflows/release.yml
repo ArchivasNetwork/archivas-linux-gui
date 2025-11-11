@@ -72,10 +72,19 @@ jobs:
         chmod +x linuxdeployqt-continuous-x86_64.AppImage
         sudo mv linuxdeployqt-continuous-x86_64.AppImage /usr/local/bin/linuxdeployqt
         
+        # Make scripts executable
+        chmod +x scripts/create-appimage.sh
+        # Run from project root
+        cd ${{ github.workspace }}
         ./scripts/create-appimage.sh
+      continue-on-error: true  # AppImage is optional, continue even if it fails
     
     - name: Create Debian Package
       run: |
+        # Make script executable
+        chmod +x scripts/create-deb.sh
+        # Run from project root
+        cd ${{ github.workspace }}
         ./scripts/create-deb.sh
     
     - name: Upload Release Assets
@@ -84,6 +93,7 @@ jobs:
         files: |
           archivas-qt-*.AppImage
           archivas-qt_*.deb
+        fail_errors: false  # Don't fail if some files are missing
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

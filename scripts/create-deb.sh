@@ -15,7 +15,10 @@ echo ""
 # Check if release build exists
 if [ ! -f "build-release/archivas-qt" ]; then
     echo "ERROR: Release build not found!"
-    echo "Please run ./scripts/build-release.sh first"
+    echo "Looking for: build-release/archivas-qt"
+    echo "Current directory: $(pwd)"
+    echo "Files in build-release:"
+    ls -la build-release/ 2>/dev/null || echo "build-release directory doesn't exist"
     exit 1
 fi
 
