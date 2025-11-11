@@ -185,24 +185,77 @@ jobs:
       run: |
         cd ${{ github.workspace }}
         
-        # Final check before building
+        # Final check before building - verify go.mod is correct
         echo "=== FINAL PRE-BUILD CHECK ==="
         cd src/go/bridge
-        echo "Current go.mod replace:"
-        grep "replace" go.mod || echo "ERROR: No replace directive!"
-        if grep -q "iljanemesis" go.mod 2>/dev/null; then
-          echo "ERROR: Old path found in go.mod!"
+        echo "Current directory: $(pwd)"
+        echo "Current go.mod replace directive:"
+        if grep -q "replace" go.mod; then
+          grep "replace" go.mod
+        else
+          echo "ERROR: No replace directive found in go.mod!"
+          echo "go.mod contents:"
           cat go.mod
           exit 1
         fi
+        
+        # Check for old paths
+        if grep -q "iljanemesis" go.mod 2>/dev/null; then
+          echo "ERROR: Old path found in go.mod!"
+          echo "go.mod contents:"
+          cat go.mod
+          exit 1
+        fi
+        
+        # Verify replace points to /tmp/archivas
+        if ! grep -q "replace github.com/ArchivasNetwork/archivas => /tmp/archivas" go.mod; then
+          echo "ERROR: Replace directive doesn't point to /tmp/archivas!"
+          echo "go.mod contents:"
+          cat go.mod
+          exit 1
+        fi
+        
+        # Verify /tmp/archivas exists and has go.mod
+        if [ ! -d "/tmp/archivas" ] || [ ! -f "/tmp/archivas/go.mod" ]; then
+          echo "ERROR: /tmp/archivas doesn't exist or is invalid!"
+          exit 1
+        fi
+        
+        echo "✓ All pre-build checks passed"
         cd ${{ github.workspace }}
         
         # Build
+        echo ""
+        echo "=== STARTING BUILD ==="
         chmod +x scripts/*.sh
         chmod +x *.sh || true
         mkdir -p build-release
         cd build-release
+        
+        # Configure CMake
+        echo "Configuring CMake..."
         cmake .. -DCMAKE_BUILD_TYPE=Release
+        
+        # Verify go.mod is still correct after CMake config
+        echo ""
+        echo "Verifying go.mod after CMake configuration..."
+        cd ../src/go/bridge
+        if grep -q "iljanemesis" go.mod 2>/dev/null; then
+          echo "ERROR: go.mod was corrupted after CMake config!"
+          cat go.mod
+          exit 1
+        fi
+        if ! grep -q "replace github.com/ArchivasNetwork/archivas => /tmp/archivas" go.mod; then
+          echo "ERROR: Replace directive missing after CMake config!"
+          cat go.mod
+          exit 1
+        fi
+        echo "✓ go.mod is still correct"
+        
+        # Build
+        cd ${{ github.workspace }}/build-release
+        echo ""
+        echo "Building..."
         make -j$(nproc)
         
         # Verify build succeeded
