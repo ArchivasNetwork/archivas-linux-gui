@@ -38,10 +38,11 @@ jobs:
     
     - name: Setup Go Module
       run: |
-        # Set Go environment variables first
+        # Set Go environment variables
         export GO111MODULE=on
-        export GOPROXY=direct
-        export GOSUMDB=off
+        # Don't set GOSUMDB=off - we need it for toolchain verification
+        # Use GOPRIVATE to mark archivas as private (no checksum verification needed for private modules)
+        export GOPRIVATE=github.com/ArchivasNetwork/archivas
         
         # Clone the archivas repository (required for build)
         echo "Cloning archivas repository..."
@@ -108,8 +109,8 @@ jobs:
         # Run go mod tidy to update dependencies (this will regenerate go.sum)
         echo ""
         echo "Running go mod tidy to update dependencies..."
-        export GOPROXY=direct
-        export GOSUMDB=off
+        # GOPRIVATE is already set, so archivas module won't use checksum database
+        # But toolchain downloads will still work
         go mod tidy -v 2>&1
         
         # Final verification
