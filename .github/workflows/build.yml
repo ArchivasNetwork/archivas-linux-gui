@@ -36,25 +36,39 @@ jobs:
         echo "Cloning archivas repository..."
         git clone --depth 1 https://github.com/ArchivasNetwork/archivas.git /tmp/archivas || true
         
+        # Verify archivas repo was cloned
+        if [ ! -d "/tmp/archivas" ]; then
+          echo "ERROR: Failed to clone archivas repository"
+          exit 1
+        fi
+        echo "Archivas repository cloned to /tmp/archivas"
+        
         # Update go.mod to use the cloned path
         cd src/go/bridge
+        echo "Current go.mod replace directive:"
+        grep "replace" go.mod || echo "No replace directive found"
+        
         echo "Updating go.mod replace directive..."
-        if grep -q "^replace github.com/ArchivasNetwork/archivas" go.mod; then
-          # Update existing replace
-          sed -i 's|^replace github.com/ArchivasNetwork/archivas => .*|replace github.com/ArchivasNetwork/archivas => /tmp/archivas|' go.mod
-        else
-          # Add replace directive
-          echo "" >> go.mod
-          echo "replace github.com/ArchivasNetwork/archivas => /tmp/archivas" >> go.mod
-        fi
+        # Remove any existing replace directive (including commented ones and old paths)
+        sed -i '/^replace github.com\/ArchivasNetwork\/archivas/d' go.mod
+        sed -i '/^#.*replace github.com\/ArchivasNetwork\/archivas/d' go.mod
+        sed -i '/\/home\/iljanemesis\/archivas/d' go.mod
+        
+        # Add new replace directive at the end
+        echo "" >> go.mod
+        echo "replace github.com/ArchivasNetwork/archivas => /tmp/archivas" >> go.mod
+        
+        # Verify the update
+        echo "Updated go.mod replace directive:"
+        tail -3 go.mod
         
         # Run go mod tidy to update dependencies
         echo "Running go mod tidy..."
-        go mod tidy
+        go mod tidy 2>&1 | head -20
         
-        # Verify replace directive
-        echo "Replace directive:"
-        grep "replace github.com/ArchivasNetwork/archivas" go.mod || echo "WARNING: Replace directive not found"
+        # Final verification
+        echo "Final replace directive:"
+        grep "replace github.com/ArchivasNetwork/archivas" go.mod || echo "ERROR: Replace directive not found!"
     
     - name: Build
       run: |
