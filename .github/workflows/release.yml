@@ -521,31 +521,9 @@ jobs:
           cp ../resources/icons/archivas-core-512x512.png "${APP_BUNDLE}/Contents/Resources/icon.png"
         fi
         
-        # Create Info.plist
-        cat > "${APP_BUNDLE}/Contents/Info.plist" << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>
-    <string>Archivas Core</string>
-    <key>CFBundleIconFile</key>
-    <string>icon</string>
-    <key>CFBundleIdentifier</key>
-    <string>ai.archivas.archivas-core</string>
-    <key>CFBundleName</key>
-    <string>Archivas Core</string>
-    <key>CFBundleVersion</key>
-    <string>1.0.0</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>10.14</string>
-    <key>NSHighResolutionCapable</key>
-    <true/>
-</dict>
-</plist>
-EOF
+        # Create Info.plist using script to avoid YAML parsing issues
+        chmod +x ../scripts/create-info-plist.sh
+        ../scripts/create-info-plist.sh "${APP_BUNDLE}"
         
         echo "✓ App bundle created: ${APP_BUNDLE}"
         ls -lh "${APP_BUNDLE}"
