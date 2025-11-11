@@ -60,7 +60,7 @@ This project forks Bitcoin Core's mature Qt desktop application framework and re
    ./build/archivas-qt
    ```
 
-See [BUILD_INSTRUCTIONS.md](./BUILD_INSTRUCTIONS.md) for detailed build instructions.
+See [BUILD.md](./BUILD.md) for detailed build instructions.
 
 ## Features
 
@@ -75,10 +75,11 @@ See [BUILD_INSTRUCTIONS.md](./BUILD_INSTRUCTIONS.md) for detailed build instruct
 
 ## Documentation
 
-- [BUILD_INSTRUCTIONS.md](./BUILD_INSTRUCTIONS.md) - Detailed build instructions
+- [BUILD.md](./BUILD.md) - Detailed build instructions
 - [DISTRIBUTION.md](./DISTRIBUTION.md) - How to package and distribute the application
 - [CHANGELOG.md](./CHANGELOG.md) - Version history and changes
 - [SPECIFICATION.md](./SPECIFICATION.md) - Technical specification
+- [QUICKSTART.md](./QUICKSTART.md) - Quick start guide
 
 ## Distribution
 
