@@ -40,6 +40,12 @@ This project forks Bitcoin Core's mature Qt desktop application framework and re
 2. Install: `sudo dpkg -i archivas-qt_1.0.0_amd64.deb`
 3. Run: `archivas-qt`
 
+**macOS**:
+1. Download `archivas-qt-1.0.0-macos.dmg` from [Releases](https://github.com/ArchivasNetwork/archivas-linux-gui/releases)
+2. Open the DMG file
+3. Drag "Archivas Core.app" to Applications
+4. Run from Applications or Launchpad
+
 ### Option 2: Build from Source
 
 1. **Install Dependencies**:

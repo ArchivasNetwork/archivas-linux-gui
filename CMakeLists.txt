@@ -67,9 +67,19 @@ target_link_libraries(archivas-qt
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::Network
     archivas_go_bridge
-    pthread
-    dl
 )
+
+# Platform-specific libraries
+if(APPLE)
+    # macOS doesn't need explicit pthread or dl linking
+    # These are automatically linked
+elseif(UNIX)
+    # Linux
+    target_link_libraries(archivas-qt
+        pthread
+        dl
+    )
+endif()
 
 # Ensure Go bridge is built before archivas-qt
 add_dependencies(archivas-qt archivas_go_bridge_target)
