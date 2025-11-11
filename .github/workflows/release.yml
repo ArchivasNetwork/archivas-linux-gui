@@ -300,6 +300,19 @@ jobs:
         fi
         echo "Using tag: $(cat $GITHUB_OUTPUT | grep tag | cut -d'=' -f2)"
     
+    - name: List Files Before Upload
+      run: |
+        echo "=== FILES TO UPLOAD ==="
+        cd ${{ github.workspace }}
+        echo "Looking for AppImage files:"
+        ls -lh archivas-qt-*.AppImage 2>/dev/null || echo "No AppImage files found"
+        echo ""
+        echo "Looking for .deb files:"
+        ls -lh archivas-qt_*.deb 2>/dev/null || echo "No .deb files found"
+        echo ""
+        echo "All files in workspace root:"
+        ls -lh *.AppImage *.deb 2>/dev/null || echo "No package files in root"
+    
     - name: Upload Release Assets
       uses: softprops/action-gh-release@v1
       with:
