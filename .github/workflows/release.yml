@@ -30,10 +30,23 @@ jobs:
       with:
         go-version: '1.21'
     
+    - name: Clone Archivas Repository
+      run: |
+        # Clone the archivas repository to replace the local path in go.mod
+        git clone https://github.com/ArchivasNetwork/archivas.git /tmp/archivas || true
+        # Update go.mod to use the cloned path
+        cd src/go/bridge
+        sed -i 's|replace github.com/ArchivasNetwork/archivas => .*|replace github.com/ArchivasNetwork/archivas => /tmp/archivas|' go.mod
+        cat go.mod | grep replace
+    
     - name: Build Release
       run: |
         chmod +x scripts/*.sh
-        ./scripts/build-release.sh
+        chmod +x *.sh || true
+        mkdir -p build-release
+        cd build-release
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        make -j$(nproc)
     
     - name: Create AppImage
       run: |
