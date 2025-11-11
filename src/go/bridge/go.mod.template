@@ -43,4 +43,5 @@ require (
 # replace github.com/ArchivasNetwork/archivas => /path/to/your/archivas
 
 # For CI: The workflow automatically handles this
-# For users: Use scripts/setup-go-mod.sh or build will use GitHub module
+# For users building from source: See BUILD_INSTRUCTIONS.md
+

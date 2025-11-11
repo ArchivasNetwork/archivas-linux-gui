@@ -8,7 +8,7 @@
 
 ## Step 1: Install Dependencies
 
-You need to install Qt5 development packages and CMake. Run:
+You need to install Qt5 development packages, CMake, and Go. Run:
 
 ```bash
 sudo ./install-deps.sh
@@ -18,8 +18,18 @@ Or manually:
 
 ```bash
 sudo apt update
-sudo apt install qtbase5-dev qtbase5-dev-tools cmake build-essential
+sudo apt install qtbase5-dev qtbase5-dev-tools cmake build-essential golang-go
 ```
+
+## Step 1.5: Setup Go Module (Optional)
+
+If you have a local `archivas` repository and want to use it instead of the GitHub module:
+
+```bash
+./scripts/setup-go-mod.sh /path/to/your/archivas
+```
+
+**Note**: This is optional. If you don't have a local archivas repo, the build will attempt to use the GitHub module. The CI build automatically handles this.
 
 ## Step 2: Build the Application
 
