@@ -11,7 +11,7 @@ on:
         default: 'v1.0.0'
 
 jobs:
-  build-release:
+  build-release-linux:
     runs-on: ubuntu-latest
     permissions:
       contents: write  # Required to create releases and upload assets
@@ -364,7 +364,7 @@ jobs:
           echo "WARNING: No AppImage file found (optional)"
         fi
     
-    - name: Upload Release Assets
+    - name: Upload Linux Release Assets
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.get_tag.outputs.tag }}
@@ -374,6 +374,244 @@ jobs:
         files: |
           ${{ steps.find_files.outputs.deb_file }}
           ${{ steps.find_files.outputs.appimage_file }}
+        fail_on_unmatched_files: false
+        generate_release_notes: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      continue-on-error: false
+
+  build-release-macos:
+    runs-on: macos-latest
+    permissions:
+      contents: write  # Required to create releases and upload assets
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Install Dependencies
+      run: |
+        # Install Homebrew dependencies
+        brew install cmake qt@6 go
+    
+    - name: Setup Go Module
+      run: |
+        # Set Go environment variables
+        export GO111MODULE=on
+        export GOPRIVATE=github.com/ArchivasNetwork/archivas
+        
+        # Clone the archivas repository (required for build)
+        echo "Cloning archivas repository..."
+        git clone --depth 1 https://github.com/ArchivasNetwork/archivas.git /tmp/archivas
+        
+        # Verify archivas repo was cloned
+        if [ ! -d "/tmp/archivas" ]; then
+          echo "ERROR: Failed to clone archivas repository"
+          exit 1
+        fi
+        echo "✓ Archivas repository cloned to /tmp/archivas"
+        
+        # Clear Go module cache and build cache
+        echo "Clearing Go module and build cache..."
+        go clean -modcache 2>&1 || true
+        go clean -cache 2>&1 || true
+        
+        # Update go.mod to use the cloned path
+        cd src/go/bridge
+        echo "Current directory: $(pwd)"
+        echo "Current go.mod replace directive:"
+        grep "replace" go.mod || echo "No replace directive found"
+        
+        echo ""
+        echo "Updating go.mod replace directive..."
+        # Remove ANY line containing replace for archivas
+        sed -i '' '/replace.*ArchivasNetwork\/archivas/d' go.mod
+        sed -i '' '/#.*replace.*ArchivasNetwork\/archivas/d' go.mod
+        sed -i '' '/iljanemesis/d' go.mod
+        
+        # Add new replace directive at the end
+        echo "" >> go.mod
+        echo "replace github.com/ArchivasNetwork/archivas => /tmp/archivas" >> go.mod
+        
+        # Remove go.sum completely to force regeneration
+        echo ""
+        echo "Removing go.sum to force clean rebuild..."
+        rm -f go.sum
+        
+        # Verify /tmp/archivas has a go.mod
+        echo ""
+        echo "Verifying /tmp/archivas is a valid Go module:"
+        if [ -f "/tmp/archivas/go.mod" ]; then
+          echo "✓ /tmp/archivas/go.mod exists"
+          head -5 /tmp/archivas/go.mod
+        else
+          echo "ERROR: /tmp/archivas/go.mod not found!"
+          exit 1
+        fi
+        
+        # Run go mod tidy to update dependencies
+        echo ""
+        echo "Running go mod tidy to update dependencies..."
+        go mod tidy -v 2>&1
+        
+        # Final verification
+        echo ""
+        echo "=== FINAL VERIFICATION ==="
+        echo "Replace directive in go.mod:"
+        grep "replace" go.mod || echo "ERROR: Replace directive not found!"
+        echo ""
+        echo "Checking for old paths:"
+        if grep -q "iljanemesis" go.mod go.sum 2>/dev/null; then
+          echo "ERROR: Old paths still found!"
+          grep "iljanemesis" go.mod go.sum 2>/dev/null
+          exit 1
+        fi
+        echo "✓ No old paths found"
+    
+    - name: Build Release
+      run: |
+        cd ${{ github.workspace }}
+        
+        # Build
+        echo "=== STARTING BUILD ==="
+        mkdir -p build-release
+        cd build-release
+        
+        # Get Qt path from Homebrew
+        QT_PREFIX=$(brew --prefix qt@6)
+        echo "Qt prefix: $QT_PREFIX"
+        
+        # Configure CMake
+        echo "Configuring CMake..."
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$QT_PREFIX"
+        
+        # Build
+        echo ""
+        echo "Building..."
+        make -j$(sysctl -n hw.ncpu)
+        
+        # Verify build succeeded
+        if [ ! -f "archivas-qt" ]; then
+            echo "ERROR: Build failed - archivas-qt not found"
+            exit 1
+        fi
+        echo "✓ Build successful: $(pwd)/archivas-qt"
+        ls -lh archivas-qt
+    
+    - name: Create App Bundle
+      run: |
+        cd ${{ github.workspace }}/build-release
+        
+        echo "Creating macOS app bundle..."
+        APP_NAME="Archivas Core"
+        APP_BUNDLE="${APP_NAME}.app"
+        
+        # Create app bundle structure
+        mkdir -p "${APP_BUNDLE}/Contents/MacOS"
+        mkdir -p "${APP_BUNDLE}/Contents/Resources"
+        
+        # Copy executable
+        cp archivas-qt "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
+        chmod +x "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
+        
+        # Copy icon
+        if [ -f "../resources/icons/archivas-core-512x512.png" ]; then
+          cp ../resources/icons/archivas-core-512x512.png "${APP_BUNDLE}/Contents/Resources/icon.png"
+        fi
+        
+        # Create Info.plist
+        cat > "${APP_BUNDLE}/Contents/Info.plist" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>${APP_NAME}</string>
+    <key>CFBundleIconFile</key>
+    <string>icon</string>
+    <key>CFBundleIdentifier</key>
+    <string>ai.archivas.archivas-core</string>
+    <key>CFBundleName</key>
+    <string>${APP_NAME}</string>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.14</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+</dict>
+</plist>
+EOF
+        
+        echo "✓ App bundle created: ${APP_BUNDLE}"
+        ls -lh "${APP_BUNDLE}"
+    
+    - name: Create DMG
+      run: |
+        cd ${{ github.workspace }}/build-release
+        
+        echo "Creating DMG package..."
+        APP_NAME="Archivas Core"
+        APP_BUNDLE="${APP_NAME}.app"
+        VERSION="1.0.0"
+        DMG_NAME="archivas-qt-${VERSION}-macos.dmg"
+        
+        # Clean previous DMG
+        rm -f "$DMG_NAME"
+        rm -rf dmg-temp
+        
+        # Create temporary directory for DMG
+        mkdir -p dmg-temp
+        cp -R "${APP_BUNDLE}" dmg-temp/
+        
+        # Create Applications symlink
+        ln -s /Applications dmg-temp/Applications
+        
+        # Create DMG
+        echo "Creating DMG file..."
+        hdiutil create -volname "${APP_NAME}" -srcfolder dmg-temp -ov -format UDZO "$DMG_NAME"
+        
+        # Clean up
+        rm -rf dmg-temp
+        
+        # Verify DMG was created
+        if [ ! -f "$DMG_NAME" ]; then
+            echo "ERROR: DMG creation failed!"
+            exit 1
+        fi
+        
+        echo "✓ DMG created: $DMG_NAME"
+        ls -lh "$DMG_NAME"
+        
+        # Move DMG to workspace root
+        mv "$DMG_NAME" "${{ github.workspace }}/"
+    
+    - name: Get Release Tag
+      id: get_tag
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          TAG="${{ github.event.inputs.version }}"
+        elif [ "${{ github.event_name }}" = "release" ]; then
+          TAG="${{ github.event.release.tag_name }}"
+        else
+          TAG="v1.0.0"
+        fi
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        echo "Using tag: $TAG"
+    
+    - name: Upload macOS Release Assets
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.get_tag.outputs.tag }}
+        name: Archivas Core GUI ${{ steps.get_tag.outputs.tag }}
+        draft: false
+        prerelease: false
+        files: |
+          archivas-qt-*-macos.dmg
         fail_on_unmatched_files: false
         generate_release_notes: false
       env:
