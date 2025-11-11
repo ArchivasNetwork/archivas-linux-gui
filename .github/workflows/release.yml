@@ -534,7 +534,13 @@ jobs:
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
           TAG="${{ github.event.inputs.version }}"
         elif [ "${{ github.event_name }}" = "release" ]; then
+          # For release events (created or edited), get tag from release
           TAG="${{ github.event.release.tag_name }}"
+          if [ -z "$TAG" ]; then
+            echo "WARNING: Release tag_name is empty, trying to get from refs"
+            # Fallback: try to get from GITHUB_REF
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
         else
           TAG="v1.0.0"
         fi
@@ -544,6 +550,8 @@ jobs:
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Using tag: $TAG"
         echo "Using version: $VERSION"
+        echo "Event name: ${{ github.event_name }}"
+        echo "Release tag_name: ${{ github.event.release.tag_name }}"
     
     - name: Create DMG
       run: |
