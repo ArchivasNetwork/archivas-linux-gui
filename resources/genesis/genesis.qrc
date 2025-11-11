@@ -1,0 +1,7 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/genesis">
+        <file>devnet.genesis.json</file>
+    </qresource>
+</RCC>
+

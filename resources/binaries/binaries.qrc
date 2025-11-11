@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/binaries">
+        <file>archivas-node</file>
+        <file>archivas-farmer</file>
+    </qresource>
+</RCC>
+

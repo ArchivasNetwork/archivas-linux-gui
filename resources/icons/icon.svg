@@ -1,0 +1,14 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dark purple circle with dark gray border -->
+  <circle cx="256" cy="256" r="240" fill="#2d1b4e" stroke="#4a4a4a" stroke-width="8"/>
+  
+  <!-- Neon green letter R -->
+  <path d="M 180 120 L 180 380 L 220 380 L 220 280 L 260 280 Q 300 280 320 260 Q 340 240 340 200 Q 340 160 320 140 Q 300 120 260 120 Z M 220 160 L 260 160 Q 280 160 290 170 Q 300 180 300 200 Q 300 220 290 230 Q 280 240 260 240 L 220 240 Z M 220 260 L 280 260 L 300 320 L 340 320 L 310 260 Q 340 260 340 240 L 340 220 L 220 220 Z" 
+        fill="#00ff88" 
+        stroke="none"
+        transform="translate(86, 66)"/>
+  
+  <!-- Diagonal leg of R -->
+  <path d="M 220 260 L 300 380 L 340 380 L 260 260 Z" fill="#00ff88"/>
+</svg>
+

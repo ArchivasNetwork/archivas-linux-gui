@@ -1,0 +1,18 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file>archivas-core.png</file>
+        <file>archivas-core-16x16.png</file>
+        <file>archivas-core-22x22.png</file>
+        <file>archivas-core-24x24.png</file>
+        <file>archivas-core-32x32.png</file>
+        <file>archivas-core-48x48.png</file>
+        <file>archivas-core-64x64.png</file>
+        <file>archivas-core-96x96.png</file>
+        <file>archivas-core-128x128.png</file>
+        <file>archivas-core-256x256.png</file>
+        <file>archivas-core-512x512.png</file>
+        <file>icon.svg</file>
+        <file>icon.png</file>
+    </qresource>
+</RCC>
+
