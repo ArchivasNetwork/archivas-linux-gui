@@ -137,9 +137,22 @@ jobs:
         cd ${{ github.workspace }}
         ./scripts/create-deb.sh
     
+    - name: Get Release Tag
+      id: get_tag
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "tag=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        elif [ "${{ github.event_name }}" = "release" ]; then
+          echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+        else
+          echo "tag=v1.0.0" >> $GITHUB_OUTPUT
+        fi
+        echo "Using tag: $(cat $GITHUB_OUTPUT | grep tag | cut -d'=' -f2)"
+    
     - name: Upload Release Assets
       uses: softprops/action-gh-release@v1
       with:
+        tag_name: ${{ steps.get_tag.outputs.tag }}
         files: |
           archivas-qt-*.AppImage
           archivas-qt_*.deb
